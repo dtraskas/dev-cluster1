@@ -1,0 +1,64 @@
+# ClusterConfig object creating a new VPC and 3 workers:
+--- 
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: dev1
+  region: eu-west-2
+
+cloudWatch:
+  clusterLogging:
+    # enable specific types of cluster control plane logs
+    enableTypes: ["api", "audit", "authenticator", "controllerManager", "scheduler"]
+    # all supported types: ["api", "audit", "authenticator", "controllerManager", "scheduler"]
+    # supported special values: "*" and "all"
+
+iam:
+  serviceRoleARN: "arn:aws:iam::430153336777:role/eksServiceRole" # This has to be replaced with the appropriate ARN
+  withOIDC: true
+  serviceAccounts:
+  - metadata:
+      name: cluster-autoscaler
+      namespace: kube-system
+      labels: {aws-usage: "cluster-ops"}
+    attachPolicy: # inline policy can be defined along with `attachPolicyARNs`
+      Version: "2012-10-17"
+      Statement:
+      - Effect: Allow
+        Action:
+        - "autoscaling:DescribeAutoScalingGroups"
+        - "autoscaling:DescribeAutoScalingInstances"
+        - "autoscaling:DescribeLaunchConfigurations"
+        - "autoscaling:DescribeTags"
+        - "autoscaling:SetDesiredCapacity"
+        - "autoscaling:TerminateInstanceInAutoScalingGroup"
+        Resource: '*'
+
+nodeGroups:
+  - name: web-workers
+    instanceType: m5.large
+    minSize: 1
+    maxSize: 3
+    desiredCapacity: 3
+    amiFamily: AmazonLinux2
+    ami: auto
+    volumeSize: 20
+    availabilityZones: ["eu-west-2a", "eu-west-2b", "eu-west-2c"]
+    labels:
+      nodegroup-type: frontend-workloads
+    privateNetworking: true # if only 'Private' subnets are given, this must be enabled
+    ssh: # use existing EC2 key but don't allow SSH access to nodegroup.
+      publicKeyName: ec2_dev_key      
+    iam:
+      attachPolicyARNs:
+        - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+      withAddonPolicies:
+        autoScaler: true
+        imageBuilder: true
+    tags:
+      # EC2 tags required for cluster-autoscaler auto-discovery
+      k8s.io/cluster-autoscaler/enabled: "true"
+      k8s.io/cluster-autoscaler/dev1: "owned"

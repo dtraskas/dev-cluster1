@@ -1,0 +1,10 @@
+kind: StorageClass
+apiVersion: storage.k8s.io/v1beta1
+metadata:
+  name: gp2-encrypted
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: gp2
+  encrypted: "true"
+  zones: eu-west-2a,eu-west-2b,eu-west-2c
+allowVolumeExpansion: true

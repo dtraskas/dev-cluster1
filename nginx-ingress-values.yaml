@@ -1,0 +1,183 @@
+## nginx configuration
+## Ref: https://github.com/kubernetes/ingress/blob/master/controllers/nginx/configuration.md
+##
+controller:
+  name: controller
+  # Configures the ports the nginx-controller listens on
+  containerPort:
+    http: 80
+    https: 443
+
+  ## Use host ports 80 and 443
+  daemonset:
+    useHostPort: false
+
+    hostPorts:
+      http: 80
+      https: 443
+
+  ## Allows customization of the external service
+  ## the ingress will be bound to via DNS
+  publishService:
+    enabled: true
+  
+  ## DaemonSet or Deployment
+  ##
+  kind: Deployment
+
+  ## Liveness and readiness probe values
+  ## Ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
+  ##
+  livenessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 1
+    port: 10254
+  readinessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 1
+    port: 10254
+
+  replicaCount: 2
+
+  minAvailable: 1
+
+  service:
+    enabled: true
+
+    annotations: 
+      service.beta.kubernetes.io/aws-load-balancer-type: nlb
+    labels: {}
+    clusterIP: ""
+
+    enableHttp: true
+    enableHttps: true
+
+    ## Set external traffic policy to: "Local" to preserve source IP on
+    ## providers supporting it
+    ## Ref: https://kubernetes.io/docs/tutorials/services/source-ip/#source-ip-for-services-with-typeloadbalancer
+    externalTrafficPolicy: "Local"
+
+    healthCheckNodePort: 0
+
+    ports:
+      http: 80
+      https: 443
+
+    targetPorts:
+      http: http
+      https: https
+
+    type: LoadBalancer
+
+    nodePorts:
+      http: ""
+      https: ""
+      tcp: {}
+      udp: {}
+
+  metrics:
+    port: 10254
+    # if this port is changed, change healthz-port: in extraArgs: accordingly
+    enabled: true
+
+    service:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "10254"
+
+      omitClusterIP: false
+      clusterIP: ""
+
+      ## List of IP addresses at which the stats-exporter service is available
+      ## Ref: https://kubernetes.io/docs/user-guide/services/#external-ips
+      ##
+      externalIPs: []
+
+      loadBalancerIP: ""
+      loadBalancerSourceRanges: []
+      servicePort: 9913
+      type: ClusterIP
+
+    serviceMonitor:
+      enabled: false
+      additionalLabels: {}
+      namespace: ""
+      scrapeInterval: 30s
+      # honorLabels: true
+
+    prometheusRule:
+      enabled: false
+      additionalLabels: {}
+      namespace: ""
+      rules: []
+
+  lifecycle: {}
+
+  priorityClassName: ""
+
+## Rollback limit
+##
+revisionHistoryLimit: 10
+
+## Default 404 backend
+##
+defaultBackend:
+
+  ## If false, controller.defaultBackendService must be provided
+  ##
+  enabled: true
+
+  name: default-backend
+  serviceAccount:
+    create: true
+    name:
+  port: 8080
+
+  ## Readiness and liveness probes for default backend
+  ## Ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/
+  ##
+  livenessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 5
+  readinessProbe:
+    failureThreshold: 6
+    initialDelaySeconds: 0
+    periodSeconds: 5
+    successThreshold: 1
+    timeoutSeconds: 5
+
+  replicaCount: 1
+
+  minAvailable: 1
+
+  service:
+    annotations: {}
+    omitClusterIP: false
+    clusterIP: ""
+
+    loadBalancerIP: ""
+    loadBalancerSourceRanges: []
+    servicePort: 80
+    type: ClusterIP
+
+## Enable RBAC as per https://github.com/kubernetes/ingress/tree/master/examples/rbac/nginx and https://github.com/kubernetes/ingress/issues/266
+rbac:
+  create: true
+
+# If true, create & use Pod Security Policy resources
+# https://kubernetes.io/docs/concepts/policy/pod-security-policy/
+podSecurityPolicy:
+  enabled: false
+
+serviceAccount:
+  create: true
+  name:
