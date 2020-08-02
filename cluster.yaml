@@ -15,7 +15,7 @@ cloudWatch:
     # supported special values: "*" and "all"
 
 iam:
-  serviceRoleARN: "arn:aws:iam::430153336777:role/eksServiceRole" # This has to be replaced with the appropriate ARN
+  serviceRoleARN: "<Your eksServiceRole>" # TODO, this has to be replaced with the appropriate ARN
   withOIDC: true
   serviceAccounts:
   - metadata:
